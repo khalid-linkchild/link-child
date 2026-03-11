@@ -1,4 +1,3 @@
-
 /* ── SECURITY: XSS sanitization ── */
 function sanitize(str) {
   if (!str) return '';
@@ -396,10 +395,10 @@ let cgptHistory = [];
 let cgptTyping = false;
 
 /* API key */
-const GEMINI_KEY = 'AIzaSyAAARt3RoJfhv6vYZQKcWRaMX0v1k3z2hA';
+const OPENROUTER_KEY = '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';
 
 function cgptGetKey() {
-  return GEMINI_KEY;
+  return OPENROUTER_KEY;
 }
 function cgptSetKey(k) {
   localStorage.setItem('lc_api_key', k);
@@ -527,46 +526,40 @@ async function cgptSend(overrideText) {
   cgptAddTyping();
 
   try {
-    // Build Gemini conversation history
-    const geminiContents = cgptHistory.map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
-    }));
-
-    const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + cgptGetKey(),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: CGPT_SYSTEM }] },
-          contents: geminiContents
-        })
-      }
-    );
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + cgptGetKey(),
+        'HTTP-Referer': 'https://khalid-linkchild.github.io/link-child',
+        'X-Title': 'Link Child'
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-exp:free',
+        messages: [
+          { role: 'system', content: CGPT_SYSTEM },
+          ...cgptHistory
+        ]
+      })
+    });
 
     const data = await res.json();
     cgptRemoveTyping();
 
     let reply;
     if (data?.error) {
-      if (data.error.status === 'PERMISSION_DENIED' || data.error.code === 403) {
-        reply = '❌ خطأ في المفتاح — تأكد من صحته وحاول مرة أخرى.';
-      } else {
-        reply = '⚠️ ' + (data.error.message || 'خطأ غير معروف');
-      }
+      reply = '⚠️ ' + (data.error.message || 'خطأ غير معروف');
       cgptTyping = false;
       cgptAddRow('bot', reply);
     } else {
-      reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || '⚠️ لا يوجد رد';
-      /* Format markdown-lite */
+      reply = data?.choices?.[0]?.message?.content || '⚠️ لا يوجد رد';
       reply = reply
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
         .replace(/`(.*?)`/g, '<code style="background:#1a1a1a;padding:2px 6px;border-radius:4px;font-family:monospace;">$1</code>')
         .replace(/\n\n/g, '<br><br>')
         .replace(/\n/g, '<br>');
-      cgptHistory.push({ role: 'assistant', content: data.candidates[0].content.parts[0].text });
+      cgptHistory.push({ role: 'assistant', content: data.choices[0].message.content });
       cgptTypewriter(reply);
     }
   } catch(err) {
