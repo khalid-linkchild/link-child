@@ -396,7 +396,6 @@ let cgptTyping = false;
 
 /* API key stored in localStorage */
 /* ═══ ضع مفتاحك هنا مباشرة ═══ */
-const HARDCODED_KEY = '';
 
 function cgptGetKey() {
   return localStorage.getItem('lc_api_key') || '';
@@ -504,9 +503,9 @@ async function cgptSend(overrideText) {
       + '<div class="cgpt-bubble">'
       + '<div style="background:#2f2f2f;border:1px solid #10a37f;border-radius:12px;padding:20px;">'
       + '<div style="font-size:1rem;font-weight:700;color:#ececec;margin-bottom:8px;">🔑 مطلوب مفتاح API</div>'
-      + '<div style="font-size:.85rem;color:#8e8ea0;margin-bottom:14px;">أدخل مفتاح Gemini API للبدء.<br>احصل عليه من <a href="https://aistudio.google.com" target="_blank" style="color:#10a37f;">console.anthropic.com</a></div>'
+      + '<div style="font-size:.85rem;color:#8e8ea0;margin-bottom:14px;">أدخل مفتاح Gemini API للبدء.<br>احصل عليه من <a href="https://aistudio.google.com" target="_blank" style="color:#10a37f;">aistudio.google.com</a></div>'
       + '<div style="display:flex;gap:8px;">'
-      + '<input id="cgptKeyInput" type="password" placeholder="sk-ant-..." '
+      + '<input id="cgptKeyInput" type="password" placeholder="AIza..." '
       + 'style="flex:1;background:#212121;border:1px solid #3a3a3a;border-radius:8px;padding:10px 12px;color:#ececec;font-family:monospace;font-size:.85rem;outline:none;" />'
       + '<button onclick="cgptSaveKey()" '
       + 'style="background:#10a37f;border:none;border-radius:8px;padding:10px 18px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;">حفظ</button>'
@@ -534,7 +533,7 @@ async function cgptSend(overrideText) {
     }));
 
     const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + cgptGetKey(),
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + cgptGetKey(),
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -550,9 +549,8 @@ async function cgptSend(overrideText) {
 
     let reply;
     if (data?.error) {
-      if (data.error.status === 'INVALID_ARGUMENT' || data.error.status === 'PERMISSION_DENIED' || data.error.code === 400 || data.error.code === 403) {
-        cgptSetKey('');
-        reply = '❌ المفتاح غير صحيح. تم حذفه — اضغط إرسال مرة أخرى لإدخال مفتاح جديد.';
+      if (data.error.status === 'PERMISSION_DENIED' || data.error.code === 403) {
+        reply = '❌ خطأ في المفتاح — تأكد من صحته وحاول مرة أخرى.';
       } else {
         reply = '⚠️ ' + (data.error.message || 'خطأ غير معروف');
       }
@@ -581,13 +579,13 @@ function cgptSaveKey() {
   const input = document.getElementById('cgptKeyInput');
   const key = input?.value?.trim();
   const row = document.getElementById('cgptKeyRow');
-  if (key && key.startsWith('sk-')) {
+  if (key && key.length > 10) {
     cgptSetKey(key);
     if (row) row.remove();
     cgptAddRow('bot', '✅ تم حفظ المفتاح! اسألني أي سؤال الآن.');
   } else {
     input.style.borderColor = '#e53935';
-    input.placeholder = 'المفتاح يجب أن يبدأ بـ sk-ant-...';
+    input.placeholder = 'أدخل مفتاح Gemini API...';
   }
 }
 
