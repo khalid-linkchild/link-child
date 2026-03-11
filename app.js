@@ -1,4 +1,3 @@
-
 /* ── SECURITY: XSS sanitization ── */
 function sanitize(str) {
   if (!str) return '';
@@ -397,10 +396,10 @@ let cgptTyping = false;
 
 /* API key stored in localStorage */
 /* ═══ ضع مفتاحك هنا مباشرة ═══ */
-const HARDCODED_KEY = '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';
+const HARDCODED_KEY = '';
 
 function cgptGetKey() {
-  return HARDCODED_KEY || localStorage.getItem('lc_api_key') || '';
+  return localStorage.getItem('lc_api_key') || '';
 }
 function cgptSetKey(k) {
   localStorage.setItem('lc_api_key', k);
@@ -505,7 +504,7 @@ async function cgptSend(overrideText) {
       + '<div class="cgpt-bubble">'
       + '<div style="background:#2f2f2f;border:1px solid #10a37f;border-radius:12px;padding:20px;">'
       + '<div style="font-size:1rem;font-weight:700;color:#ececec;margin-bottom:8px;">🔑 مطلوب مفتاح API</div>'
-      + '<div style="font-size:.85rem;color:#8e8ea0;margin-bottom:14px;">أدخل مفتاح Anthropic API للبدء.<br>احصل عليه من <a href="https://console.anthropic.com" target="_blank" style="color:#10a37f;">console.anthropic.com</a></div>'
+      + '<div style="font-size:.85rem;color:#8e8ea0;margin-bottom:14px;">أدخل مفتاح Gemini API للبدء.<br>احصل عليه من <a href="https://aistudio.google.com" target="_blank" style="color:#10a37f;">console.anthropic.com</a></div>'
       + '<div style="display:flex;gap:8px;">'
       + '<input id="cgptKeyInput" type="password" placeholder="sk-ant-..." '
       + 'style="flex:1;background:#212121;border:1px solid #3a3a3a;border-radius:8px;padding:10px 12px;color:#ececec;font-family:monospace;font-size:.85rem;outline:none;" />'
@@ -528,28 +527,30 @@ async function cgptSend(overrideText) {
   cgptAddTyping();
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'x-api-key': cgptGetKey(),
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
-        system: CGPT_SYSTEM,
-        messages: cgptHistory
-      })
-    });
+    // Build Gemini conversation history
+    const geminiContents = cgptHistory.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + cgptGetKey(),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: CGPT_SYSTEM }] },
+          contents: geminiContents
+        })
+      }
+    );
 
     const data = await res.json();
     cgptRemoveTyping();
 
     let reply;
     if (data?.error) {
-      if (data.error.type === 'authentication_error') {
+      if (data.error.status === 'INVALID_ARGUMENT' || data.error.status === 'PERMISSION_DENIED' || data.error.code === 400 || data.error.code === 403) {
         cgptSetKey('');
         reply = '❌ المفتاح غير صحيح. تم حذفه — اضغط إرسال مرة أخرى لإدخال مفتاح جديد.';
       } else {
@@ -558,7 +559,7 @@ async function cgptSend(overrideText) {
       cgptTyping = false;
       cgptAddRow('bot', reply);
     } else {
-      reply = data?.content?.[0]?.text || '⚠️ لا يوجد رد';
+      reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || '⚠️ لا يوجد رد';
       /* Format markdown-lite */
       reply = reply
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -566,7 +567,7 @@ async function cgptSend(overrideText) {
         .replace(/`(.*?)`/g, '<code style="background:#1a1a1a;padding:2px 6px;border-radius:4px;font-family:monospace;">$1</code>')
         .replace(/\n\n/g, '<br><br>')
         .replace(/\n/g, '<br>');
-      cgptHistory.push({ role: 'assistant', content: data.content[0].text });
+      cgptHistory.push({ role: 'assistant', content: data.candidates[0].content.parts[0].text });
       cgptTypewriter(reply);
     }
   } catch(err) {
