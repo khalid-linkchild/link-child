@@ -1,3 +1,4 @@
+
 /* ── SECURITY: XSS sanitization ── */
 function sanitize(str) {
   if (!str) return '';
@@ -394,11 +395,11 @@ let cgptOpen = false;
 let cgptHistory = [];
 let cgptTyping = false;
 
-/* API key stored in localStorage */
-/* ═══ ضع مفتاحك هنا مباشرة ═══ */
+/* API key */
+const GEMINI_KEY = 'AIzaSyAAARt3RoJfhv6vYZQKcWRaMX0v1k3z2hA';
 
 function cgptGetKey() {
-  return localStorage.getItem('lc_api_key') || '';
+  return GEMINI_KEY;
 }
 function cgptSetKey(k) {
   localStorage.setItem('lc_api_key', k);
