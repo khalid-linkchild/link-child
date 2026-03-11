@@ -2475,10 +2475,10 @@ let cgptTyping = false;
 
 /* API key stored in localStorage */
 /* ═══ ضع مفتاحك هنا مباشرة ═══ */
-const HARDCODED_KEY = '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';
+const OPENROUTER_KEY = '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';
 
 function cgptGetKey() {
-  return HARDCODED_KEY || localStorage.getItem('lc_api_key') || '';
+  return OPENROUTER_KEY;
 }
 function cgptSetKey(k) {
   localStorage.setItem('lc_api_key', k);
@@ -2585,7 +2585,7 @@ async function cgptSend(overrideText) {
       + '<div style="font-size:1rem;font-weight:700;color:#ececec;margin-bottom:8px;">🔑 مطلوب مفتاح API</div>'
       + '<div style="font-size:.85rem;color:#8e8ea0;margin-bottom:14px;">أدخل مفتاح Anthropic API للبدء.<br>احصل عليه من <a href="https://console.anthropic.com" target="_blank" style="color:#10a37f;">console.anthropic.com</a></div>'
       + '<div style="display:flex;gap:8px;">'
-      + '<input id="cgptKeyInput" type="password" placeholder="sk-ant-..." '
+      + '<input id="cgptKeyInput" type="password" placeholder="sk-or-..." '
       + 'style="flex:1;background:#212121;border:1px solid #3a3a3a;border-radius:8px;padding:10px 12px;color:#ececec;font-family:monospace;font-size:.85rem;outline:none;" />'
       + '<button onclick="cgptSaveKey()" '
       + 'style="background:#10a37f;border:none;border-radius:8px;padding:10px 18px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;">حفظ</button>'
@@ -2606,19 +2606,20 @@ async function cgptSend(overrideText) {
   cgptAddTyping();
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'x-api-key': cgptGetKey(),
-        'anthropic-dangerous-direct-browser-access': 'true'
+        'Authorization': 'Bearer ' + cgptGetKey(),
+        'HTTP-Referer': 'https://khalid-linkchild.github.io/link-child',
+        'X-Title': 'Link Child'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
-        system: CGPT_SYSTEM,
-        messages: cgptHistory
+        model: 'google/gemini-2.0-flash-exp:free',
+        messages: [
+          { role: 'system', content: CGPT_SYSTEM },
+          ...cgptHistory
+        ]
       })
     });
 
@@ -2627,16 +2628,15 @@ async function cgptSend(overrideText) {
 
     let reply;
     if (data?.error) {
-      if (data.error.type === 'authentication_error') {
-        cgptSetKey('');
-        reply = '❌ المفتاح غير صحيح. تم حذفه — اضغط إرسال مرة أخرى لإدخال مفتاح جديد.';
+      if (data.error.type === 'authentication_error' || data.error.code === 401) {
+        reply = '❌ خطأ في المفتاح — تأكد من صحته.';
       } else {
         reply = '⚠️ ' + (data.error.message || 'خطأ غير معروف');
       }
       cgptTyping = false;
       cgptAddRow('bot', reply);
     } else {
-      reply = data?.content?.[0]?.text || '⚠️ لا يوجد رد';
+      reply = data?.choices?.[0]?.message?.content || '⚠️ لا يوجد رد';
       /* Format markdown-lite */
       reply = reply
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -2644,7 +2644,7 @@ async function cgptSend(overrideText) {
         .replace(/`(.*?)`/g, '<code style="background:#1a1a1a;padding:2px 6px;border-radius:4px;font-family:monospace;">$1</code>')
         .replace(/\n\n/g, '<br><br>')
         .replace(/\n/g, '<br>');
-      cgptHistory.push({ role: 'assistant', content: data.content[0].text });
+      cgptHistory.push({ role: 'assistant', content: data.choices[0].message.content });
       cgptTypewriter(reply);
     }
   } catch(err) {
@@ -2658,13 +2658,13 @@ function cgptSaveKey() {
   const input = document.getElementById('cgptKeyInput');
   const key = input?.value?.trim();
   const row = document.getElementById('cgptKeyRow');
-  if (key && key.startsWith('sk-')) {
+  if (key && key.length > 10) {
     cgptSetKey(key);
     if (row) row.remove();
     cgptAddRow('bot', '✅ تم حفظ المفتاح! اسألني أي سؤال الآن.');
   } else {
     input.style.borderColor = '#e53935';
-    input.placeholder = 'المفتاح يجب أن يبدأ بـ sk-ant-...';
+    input.placeholder = 'أدخل المفتاح...';
   }
 }
 
