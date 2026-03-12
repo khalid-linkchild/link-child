@@ -502,7 +502,7 @@ async function cgptSend(overrideText) {
     row.innerHTML = '<div class="cgpt-avatar bot">🤖</div>'
       + '<div class="cgpt-bubble">'
       + '<div style="background:#2f2f2f;border:1px solid #10a37f;border-radius:12px;padding:20px;">'
-      + '<div style="font-size:1rem;font-weight:700;color:#ececec;margin-bottom:8px;">🔑 مطلوب مفتاح API</div>'
+      + '<div style="font-size:1rem;font-weight:700;color:#ececec;margin-bottom:8px;">ح API</div>'
       + '<div style="font-size:.85rem;color:#8e8ea0;margin-bottom:14px;">أدخل مفتاح Gemini API للبدء.<br>احصل عليه من <a href="https://aistudio.google.com" target="_blank" style="color:#10a37f;">aistudio.google.com</a></div>'
       + '<div style="display:flex;gap:8px;">'
       + '<input id="cgptKeyInput" type="password" placeholder="AIza..." '
